@@ -1,6 +1,6 @@
 open Apero
 open Apero.Result.Infix
-open Yaks_common_types
+open Yaks_types
 open Yaks_fe_sock_codes
 open Yaks_fe_sock_types
 
@@ -149,7 +149,7 @@ let decode_body (mid:message_id) (flags:char) (buf: IOBuf.t) =
     decode_string buf >>= fun (sid, buf) ->
     decode_pathvaluelist buf >>> fun (pvs, buf) -> YNotification (sid, pvs), buf
   | EVAL ->
-    Result.fail `NotImplemented
+    decode_path buf >>> fun (path, buf) -> YPath path, buf
   | ERROR ->
     decode_vle buf >>> fun (errno, buf) -> YErrorInfo errno, buf
 

@@ -1,5 +1,5 @@
 open Apero
-open Yaks_common_types
+open Yaks_types
 open Yaks_fe_sock_codes
 
 (* The structure of a socket front end message is the following.
