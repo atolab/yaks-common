@@ -2,24 +2,9 @@ open Apero
 open Yaks_common_errors
 
 
-let remove_useless_slashes s =
-  if String.length s <= 2 then s
-  else
-    let buf = Buffer.create (String.length s) in
-    let rec filter i =
-      if i < String.length s then
-        let c = String.get s i in
-        if c <> '/' || (i+1 < String.length s && (String.get s (i+1) <> '/')) then
-          Buffer.add_char buf c;
-        filter (i+1)
-    in
-    let _ =
-      (* Note: add 1st char anyway to preserve the starting // *)
-      Buffer.add_char buf (String.get s 0);
-      filter 1
-    in
-    Buffer.contents buf
-
+let remove_useless_slashes =
+  let slashes = Str.regexp "/+" in
+  Str.global_replace slashes "/"
 
 module Path = struct
   type t = string
@@ -33,7 +18,7 @@ module Path = struct
   let of_string_opt ?(is_absolute=true) s =
     let s = Astring.trim s in
     if Astring.length s > 1 && is_valid s then
-      if is_absolute && not (Astring.is_prefix ~affix:"//" s) then None
+      if is_absolute && not (Astring.is_prefix ~affix:"/" s) then None
       else Some (remove_useless_slashes s)
     else None
 
@@ -58,18 +43,19 @@ module Selector = struct
 
 
   (* from https://tools.ietf.org/html/rfc3986#appendix-B *)
-  let sel_regex = Str.regexp "^\\([^?#]*\\)\\(\\?\\([^#]*\\)\\)?\\(#\\(.*\\)\\)?$"
+  let sel_regex = Str.regexp "^\\([^?#]+\\)\\(\\?\\([^#]*\\)\\)?\\(#\\(.*\\)\\)?$"
 
   let is_valid s = Str.string_match sel_regex s 0
 
   let of_string_opt ?(is_absolute=true) s =
     let s = Astring.trim s in
     if (not @@ Astring.is_empty s) && is_valid s then
-      if is_absolute && not (Astring.is_prefix ~affix:"//" s) then None
+      if is_absolute && not (Astring.is_prefix ~affix:"/" s) then None
       else 
-        let path = remove_useless_slashes @@ Str.matched_group 1 s
-        and query = try Some(Str.matched_group 3 s) with Not_found -> None
+        let query = try Some(Str.matched_group 3 s) with Not_found -> None
         and fragment = try Some(Str.matched_group 5 s) with Not_found -> None
+        and path = remove_useless_slashes @@ Str.matched_group 1 s
+        (* Note: path computed at the end as remove_useless_slashes also uses Str and will make Str.matched_group misbehave *)
         in
         Some { path; query; fragment }
     else None
@@ -166,52 +152,6 @@ module Selector = struct
     let _ = Logs_lwt.debug (fun m -> m "[Yco] Selector.is_matching_path %a %a : %b" pp path pp sel_path result) in
     result
 
-  (* let is_prefixed_by_path path selector =
-    let open Astring.Sub in
-    let sel_path = v @@ get_path selector in
-    let path = v @@ Path.to_string path in
-    let _ = Logs_lwt.debug (fun m -> m "---- is_prefixed_by_path %a %a " pp path pp sel_path) in
-    let rec check_is_prefixed pat sel =
-      let _ = Logs_lwt.debug (fun m -> m "   - check_is_prefixed %a %a " pp pat pp sel) in
-      (* if path is empty *)
-      if is_empty pat then
-        let _ = Logs_lwt.debug (fun m -> m "     - path is empty, it's indeed a prefix of anything => TRUE") in true
-      (* if selector is empty *)
-      else if is_empty sel then
-        let _ = Logs_lwt.debug (fun m -> m "     - path is too long (remaining: %a) => FALSE" pp pat) in false
-      (* if selector starts with '**' *)
-      else if is_prefix ~affix:double_wildcard sel then
-          let _ = Logs_lwt.debug (fun m -> m "     - ** found: %a is indeed prefix of %a => TRUE" pp pat pp sel) in true
-      (* if selector starts with '*' *)
-      else if is_prefix ~affix:simple_wildcard sel then
-        if not @@ exists is_slash pat then
-          let _ = Logs_lwt.debug (fun m -> m "     - * and %a has no / it's a prefix of %a => TRUE" pp pat pp sel) in true
-        else if length sel <= 1 then
-          let _ = Logs_lwt.debug (fun m -> m "     - * at end but remaining / in %a => FALSE" pp pat) in false
-        else (
-          let sub_sel = with_range ~first:1 sel |> get_prefix_before_wildcard_until_slash in
-          let sub_pat = get_prefix_until_slash pat in
-          match find_sub ~sub:sub_sel sub_pat with
-          | None -> let _ = Logs_lwt.debug (fun m -> m "     - %a substring not found in %a => FALSE" pp sub_sel pp sub_pat) in false
-          | Some sub' ->
-            let _ = Logs_lwt.debug (fun m -> m "     - %a substring found at %d => go on..." pp sub_sel (start_pos sub')) in
-            let pat_tail = with_range ~first:(stop_pos sub') path in
-            let sel_tail = with_range ~first:(1+(length sub_sel)) sel in
-            check_is_prefixed pat_tail sel_tail)
-      (* selector doesn't start with wildcard *)
-      else
-        let sub = get_prefix_before_wildcard sel in
-        if is_prefix ~affix:pat sub then
-          let _ = Logs_lwt.debug (fun m -> m "     - %a substring is a prefix of %a => TRUE" pp pat pp sub) in true
-        else if is_prefix ~affix:sub pat then
-          let _ = Logs_lwt.debug (fun m -> m "     - %a substring is a prefix of %a => go on..." pp sub pp pat) in
-          let first = length sub in
-          check_is_prefixed (with_range ~first pat) (with_range ~first sel)
-        else
-          let _ = Logs_lwt.debug (fun m -> m "     - %a substring is not a prefix of %a => FALSE" pp sub pp pat) in false
-    in check_is_prefixed path sel_path *)
-
-
   let remove_matching_prefix path selector =
     let open Astring.Sub in
     let sel_path = v @@ get_path selector in
@@ -252,33 +192,8 @@ module Selector = struct
     let open Apero.Option.Infix in
     check_is_prefixed path sel_path >|= to_string >>= of_string_opt ~is_absolute:false
 
-  (* WARNING: when looking is a storage covers the selector, check if result is starting by / !!!! *)
 
   let is_prefixed_by_path path selector = remove_matching_prefix path selector |> Apero.Option.is_some
-
-
-  (* let remove_prefix prefix selector =
-    (* NOTE: this algo assumes that matching of prefix with the selector have been checked *)
-    let prefix = Path.to_string prefix in
-    let sel = to_string selector in
-    let open Apero in
-    let rec next_char ip is =
-      if is >= String.length sel then ""
-      else if ip >= String.length prefix then Astring.after is sel
-      else match String.get sel is with
-        | c when c = String.get prefix ip -> next_char (ip+1) (is+1)
-        | '*' ->
-          if is+1 = String.length sel then ""
-          else let next_sel_char = String.get sel (is+1) in 
-            if next_sel_char = '*' then   (* found '**' in selector *)
-              raise (Invalid_argument "Selector with ** not supported yet in remove_prefix operation")
-            else  (* found '*' in selector *)
-              let ip' = String.index_from prefix (ip+1) next_sel_char in
-              next_char ip' (is+1)
-
-        | _ -> Astring.after is sel
-    in
-    next_char 0 0 |> of_string ~is_absolute:false *)
 
 end
 
