@@ -66,6 +66,11 @@ type payload =
   | YNotification of string * (Path.t * Value.t) list
   | YErrorInfo of Vle.t
 
+let error_info_to_string vle =
+  let code = Vle.to_int vle in
+  match int_to_error_code code with 
+  | Some c -> error_code_to_string c | None -> "UNKOWN ("^(string_of_int code)^")"
+
 
 type message = {
   header: header;  
