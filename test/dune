@@ -1,0 +1,11 @@
+(executable
+  (name      test_yaks_common)
+  (modules   test_yaks_common test_selector)
+  (libraries yaks_common alcotest)
+  (preprocess
+    (pps ppx_monadic)))
+
+(alias
+ (name runtest)
+  (deps test_yaks_common.exe)
+  (action (run %{exe:test_yaks_common.exe} -q --color=always)))
