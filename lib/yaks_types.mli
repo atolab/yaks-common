@@ -91,4 +91,4 @@ end
 
 module AccessId : (module type of Apero.Uuid)
 module StorageId : (module type of Apero.Uuid)
-module SubscriberId : Apero.Id.S
+module SubscriberId : Apero.NumId.S
