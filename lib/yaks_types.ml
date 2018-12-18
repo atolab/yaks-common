@@ -336,4 +336,4 @@ module Value = struct
 end
 module AccessId = Apero.Uuid
 module StorageId = Apero.Uuid
-module SubscriberId = Id.Make (Int64)
+module SubscriberId = NumId.Make (Int64)
