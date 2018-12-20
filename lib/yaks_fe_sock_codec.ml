@@ -69,6 +69,8 @@ let encode_value v buf =
     >>= fun buf -> Apero.encode_bytes (IOBuf.from_bytes b) buf
   | StringValue s -> encode_value_encoding STRING
     >>= fun buf -> Apero.encode_string s buf
+  | PropertiesValue p -> encode_value_encoding PROPERTIES
+    >>= fun buf -> Apero.encode_string (Properties.to_string p) buf
   | JSonValue s -> encode_value_encoding JSON
     >>= fun buf -> Apero.encode_string s buf
   | SqlValue (row, col) -> encode_value_encoding SQL

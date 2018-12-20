@@ -17,7 +17,9 @@ module Path : sig
   (** The comparison function for strings, with the same specification as [Pervasives.compare] *)
 
   val is_relative : t -> bool
-  (**[is_relative p] return true if the Path [p] is relative (i.e. it's first character is not '/') *)
+  (** [is_relative p] return true if the Path [p] is relative (i.e. it's first character is not '/') *)
+  val add_prefix : prefix:t -> t -> t
+  (** [add_prefix prefix p] return a new Path made of [prefix]/[p] *)
   val is_prefix : affix:t -> t -> bool
   (** [is_prefix affix p] returns true if [affix] is a prefix of [p] *)
   val remove_prefix : int -> t -> t
@@ -53,6 +55,10 @@ module Selector : sig
 
   val is_relative : t -> bool
   (**[is_relative s] return true if the path part ofthe Selector [s] is relative (i.e. it's first character is not '/') *)
+  val add_prefix : prefix:Path.t -> t -> t
+  (** [add_prefix prefix s] return a new Selector with path made of [prefix]/[path s].
+      The predicate, properties and fragment parts of this new Selector are the same than [s]. *)
+
   val is_path_unique : t -> bool
   (** [is_path_unique s] returns true it the path part of Selector [s] doesn't contains any wildcard ('*'). *)
   val as_unique_path : t -> Path.t option
@@ -76,8 +82,9 @@ module Value : sig
   type encoding = 
     | Raw_Encoding
     | String_Encoding 
+    | Properties_encoding
     | Json_Encoding
-    | Sql_Encoding  
+    | Sql_Encoding
 
   type sql_row = string list
   type sql_column_names = string list
@@ -85,6 +92,7 @@ module Value : sig
   type t  = 
     | RawValue of Lwt_bytes.t 
     | StringValue of string
+    | PropertiesValue of Apero.properties
     | JSonValue of string
     | SqlValue of (sql_row * sql_column_names option)
 

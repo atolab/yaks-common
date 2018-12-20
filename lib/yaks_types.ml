@@ -33,6 +33,8 @@ module Path = struct
 
   let is_relative p = Astring.get p 0 <> '/'
 
+  let add_prefix ~prefix p = remove_useless_slashes @@ (to_string prefix)^"/"^p
+
   let is_prefix ~affix path = Astring.is_prefix ~affix:(to_string affix) (to_string path)
 
   let remove_prefix length path = Astring.after length (to_string path) |> of_string
@@ -102,6 +104,10 @@ module Selector = struct
   let fragment s = s.frag
 
   let is_relative sel = Astring.get sel.path 0 <> '/'
+
+  let add_prefix ~prefix sel =
+    { path = remove_useless_slashes @@ (Path.to_string prefix)^"/"^sel.path;
+      pred = sel.pred; props = sel.props; frag = sel.frag }
 
   let is_path_unique sel = not @@ Astring.contains '*' (path sel)
 
@@ -229,7 +235,8 @@ end
 module Value = struct 
   type encoding = 
     | Raw_Encoding
-    | String_Encoding 
+    | String_Encoding
+    | Properties_encoding
     | Json_Encoding  
     | Sql_Encoding  
 
@@ -239,6 +246,7 @@ module Value = struct
   type t  = 
     | RawValue of Lwt_bytes.t 
     | StringValue of string
+    | PropertiesValue of properties
     | JSonValue of string
     | SqlValue of (sql_row * sql_column_names option)
 
@@ -247,17 +255,20 @@ module Value = struct
   let encoding = function 
     | RawValue _ -> Raw_Encoding
     | StringValue _ -> String_Encoding
+    | PropertiesValue _ -> Properties_encoding
     | JSonValue _ -> Json_Encoding
     | SqlValue _ -> Sql_Encoding
 
   let encoding_to_string = function 
     | Raw_Encoding -> "RAW"
     | String_Encoding -> "STRING"
+    | Properties_encoding -> "PROPS"
     | Json_Encoding -> "JSON"
     | Sql_Encoding -> "SQL"
 
   let encoding_of_string s =
     if s = "STRING" then String_Encoding
+    else if s = "PROPS" then Properties_encoding
     else if s = "JSON" then Json_Encoding
     else if s = "SQL" then Sql_Encoding
     else Raw_Encoding
@@ -282,14 +293,39 @@ module Value = struct
   let to_raw_encoding = function
     | RawValue _ as v -> Apero.Result.ok @@ v
     | StringValue s -> Apero.Result.ok @@ RawValue (Lwt_bytes.of_string s)
+    | PropertiesValue p -> Apero.Result.ok @@ RawValue (Lwt_bytes.of_string @@ Properties.to_string p)
     | JSonValue s -> Apero.Result.ok @@ RawValue (Lwt_bytes.of_string s)
     | SqlValue v  -> Apero.Result.ok @@ RawValue (Lwt_bytes.of_string @@ sql_to_string v)
 
   let to_string_encoding = function 
     | RawValue r  -> Apero.Result.ok @@ StringValue (Lwt_bytes.to_string r)
     | StringValue _ as v  -> Apero.Result.ok @@ v
+    | PropertiesValue p -> Apero.Result.ok @@ StringValue (Properties.to_string p)
     | JSonValue s -> Apero.Result.ok @@ StringValue s
     | SqlValue v -> Apero.Result.ok @@ StringValue (sql_to_string v)
+
+  let properties_from_json json =
+    let open Yojson.Basic in
+    match from_string json with
+    | `Assoc l -> l
+      |> List.map (fun (k, j) -> match j with
+        | `String v -> (k,v)
+        | _ -> raise @@ YException (`UnsupportedTranscoding (`Msg ("Json to Properties of  "^json))))
+      |> Properties.of_list
+    | _ -> raise @@ YException (`UnsupportedTranscoding (`Msg ("Json to Properties of  "^json)))
+
+  let properties_from_sql (row, col) =
+    match col with
+    | Some keys -> List.combine keys row |> Properties.of_list
+    | None -> raise @@ YException (`UnsupportedTranscoding (`Msg ("SQL without columns to Properties of  "^(sql_to_string (row, col)))))
+
+
+  let to_properties_encoding = function
+    | RawValue r  -> Apero.Result.ok @@ PropertiesValue (Lwt_bytes.to_string r |> Properties.of_string)
+    | StringValue s  -> Apero.Result.ok @@ PropertiesValue (Properties.of_string s)
+    | PropertiesValue _ as v -> Apero.Result.ok v
+    | JSonValue s -> Apero.Result.ok @@ PropertiesValue (properties_from_json s)
+    | SqlValue v -> Apero.Result.ok @@ PropertiesValue (properties_from_sql v)
 
   let json_from_sql (row, col) =
     let open Yojson.Basic in
@@ -299,11 +335,15 @@ module Value = struct
     in
     to_string (`Assoc kv_list)
 
+  let json_from_properties (p:properties) =
+    `Assoc (Properties.fold (fun k v l -> (k, `String v)::l) p [])
+
   let to_json_encoding = 
     let open Yojson.Basic in
     function
     | RawValue r  -> Apero.Result.ok @@ JSonValue (to_string @@ `String (Lwt_bytes.to_string r))  (* @TODO: base-64 encoding? *)
     | StringValue s  -> Apero.Result.ok @@ JSonValue (to_string @@ `String s)
+    | PropertiesValue p -> Apero.Result.ok @@ JSonValue (to_string @@ json_from_properties p)
     | JSonValue _ as v -> Apero.Result.ok @@ v
     | SqlValue v -> Apero.Result.ok @@ StringValue (json_from_sql v)
 
@@ -314,22 +354,29 @@ module Value = struct
     | `Assoc l -> List.split l |> fun (col, row) -> (List.map (fun json -> to_string json) row), Some col
     | _ -> raise @@ YException (`UnsupportedTranscoding (`Msg ("Json to SQL of  "^json)))
 
+  let sql_from_properties (p:properties) =
+    Properties.bindings p |> List.split |>
+    fun (keys, values) -> (values, Some keys)
+
   let to_sql_encoding = function
     | RawValue r -> Apero.Result.ok @@ SqlValue (sql_of_string (Lwt_bytes.to_string r))
     | StringValue s  -> Apero.Result.ok @@ SqlValue (sql_of_string s)
+    | PropertiesValue p -> Apero.Result.ok @@ SqlValue (sql_from_properties p)
     | JSonValue s -> Apero.Result.ok @@ SqlValue (sql_from_json s)
     | SqlValue _ as v -> Apero.Result.ok @@ v
 
   let transcode v = function   
     | Raw_Encoding -> to_raw_encoding v
     | String_Encoding -> to_string_encoding v
+    | Properties_encoding -> to_properties_encoding v
     | Json_Encoding -> to_json_encoding v
     | Sql_Encoding -> to_sql_encoding v
 
   let of_string s e = transcode (StringValue s)  e
   let to_string  = function 
     | RawValue r -> Lwt_bytes.to_string r
-    | StringValue s -> s 
+    | StringValue s -> s
+    | PropertiesValue p -> Properties.to_string p
     | JSonValue j -> j 
     | SqlValue s -> sql_to_string s
 

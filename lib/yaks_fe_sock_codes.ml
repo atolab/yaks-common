@@ -22,6 +22,7 @@ type value_encoding =
 | JSON [@id 0x03]
 | PROTOBUF [@id 0x04]
 | SQL [@id 0x05]
+| PROPERTIES [@id 0x06]
 | ENCODING_INVALID [@id 0x0]
 [@@uint8_t]]
 
