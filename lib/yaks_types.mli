@@ -105,7 +105,3 @@ module Value : sig
   val of_string : string -> encoding -> (t, yerror) Apero.Result.t 
   val to_string : t -> string
 end
-
-module AccessId : (module type of Apero.Uuid)
-module StorageId : (module type of Apero.Uuid)
-module SubscriberId : Apero.NumId.S
