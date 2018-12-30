@@ -87,6 +87,8 @@ let decode_value buf =
       >>= fun (b, buf) -> Result.ok (RawValue (IOBuf.to_bytes b), buf)
     | Some STRING -> Apero.decode_string buf
       >>= fun (s, buf) -> Result.ok (StringValue s, buf)
+    | Some PROPERTIES -> Apero.decode_string buf
+      >>= fun (s, buf) -> Result.ok (PropertiesValue (Properties.of_string s), buf)
     | Some JSON -> Apero.decode_string buf
       >>= fun (s, buf) -> Result.ok (JSonValue s, buf)
     | Some SQL -> Apero.decode_seq Apero.decode_string buf
@@ -131,17 +133,13 @@ let decode_pathvaluelist = decode_seq (decode_pair decode_path decode_value)
 
 
 let decode_body (mid:message_id) (flags:char) (buf: IOBuf.t) = 
+  let _ = ignore flags in (* in case of further need... *)
   match mid with 
-  | OPEN | OK ->
+  | LOGIN | LOGOUT | OK ->
     Ok (YEmpty, buf)
-  | CREATE ->
+  | WORKSPACE | DELETE ->
     decode_path buf >>> fun (path, buf) -> YPath path, buf
-  | DELETE ->
-    (match (has_access_flag flags, has_storage_flag flags) with 
-     | (true, false) | (false, true) -> Ok (YEmpty, buf)  
-     | (false, false) -> decode_path buf >>> fun (path, buf) -> YPath path, buf
-     | _ -> Result.fail `InvalidFlags)  
-  | PUT | PATCH | VALUES ->
+  | PUT | UPDATE | VALUES ->
     decode_pathvaluelist buf >>> fun (pvs, buf) -> YPathValueList pvs, buf
   | GET | SUB ->
     decode_selector buf >>> fun (sel, buf) -> YSelector sel, buf  

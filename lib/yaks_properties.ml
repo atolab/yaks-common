@@ -1,13 +1,9 @@
-module Access = struct               
-  module Key = struct 
-    let key = "is.yaks.access" 
-    let id = "is.yaks.access.id" 
-    let alias = "is.yaks.access.alias" 
-    let cache_size = "is.yaks.access.cachesize"
-    let encoding = "is.yaks.access.encoding"
-    let subscription_id = "is.yaks.subscription.id"
-  end
+module Admin = struct
+  let workspaceid = "wsid"
+  let subscriberid = "subid"
+  
 end
+
 
 module Storage = struct
   module Key = struct 

@@ -1,11 +1,12 @@
 [%%cenum
 type message_id = 
-| OPEN [@id 0x01]
-| CREATE [@id 0x02]
-| DELETE [@id 0x03]
+| LOGIN [@id 0x01]
+| LOGOUT [@id 0x02]
+| WORKSPACE [@id 0x03]
 | PUT [@id 0xA0]
-| PATCH [@id 0xA1]
+| UPDATE [@id 0xA1]
 | GET [@id 0xA2]
+| DELETE [@id 0xA3]
 | SUB [@id 0xB0]
 | UNSUB [@id 0xB1]
 | NOTIFY [@id 0xB2]
@@ -29,9 +30,6 @@ type value_encoding =
 [%%cenum
 type message_flags = 
 | PROPERTY [@id 0x01]
-| STORAGE [@id 0x02]
-| ACCESS [@id 0x04]
-
 [@@uint8_t]]
 
 [%%cenum
