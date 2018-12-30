@@ -2,10 +2,10 @@ open Yaks_common_errors
 
 module Path : sig
   type t
-  val of_string : ?is_absolute:bool -> string -> t
+  val of_string : string -> t
   (** [of_string s] returns [s] as a Path if it's valid. Otherwise it raises a [YException].
       Note that the Path's string is sanitized (i.e. it's trimmed meaningless '/' are removed) *)
-  val of_string_opt : ?is_absolute:bool -> string -> t option
+  val of_string_opt : string -> t option
   (** [of_string_opt s] returns [Some p] if [s] is a valid path. Otherwise it raises a [YException].
       Note that the Path's string is sanitized (i.e. it's trimmed and meaningless '/' are removed) *)
   val to_string : t -> string
@@ -16,6 +16,8 @@ module Path : sig
   val compare : t -> t -> int
   (** The comparison function for strings, with the same specification as [Pervasives.compare] *)
 
+  val is_relative : t -> bool
+  (**[is_relative p] return true if the Path [p] is relative (i.e. it's first character is not '/') *)
   val is_prefix : affix:t -> t -> bool
   (** [is_prefix affix p] returns true if [affix] is a prefix of [p] *)
   val remove_prefix : int -> t -> t
@@ -24,26 +26,33 @@ end [@@deriving show]
 
 module Selector : sig
   type t          
-  val of_string : ?is_absolute:bool -> string -> t
+  val of_string : string -> t
   (** [of_string s] validate the format of the string [s] as a selector and returns a Selector if valid.
       If the validation fails, an [YException] is raised. If [is_absolute] is true (default value) the string must start with '/' *)
-  val of_string_opt : ?is_absolute:bool -> string -> t option
+  val of_string_opt : string -> t option
   (** [of_string_opt s] validate the format of the string [s] as a selector and returns some Selector if valid.
       If the validation fails, None is returned. If [is_absolute] is true (default value) the string must start with '/' *)
   val to_string : t -> string
   (** [to_string s] return the Selector [s] as a string *)
   val of_path : Path.t -> t
-  (** [of_path p] returns a Selector with its path equal to [p] and without query and fragment *)
+  (** [of_path p] returns a Selector with its path equal to [p] and without predicate, properties nor fragment *)
 
-  val get_path : t -> string
+  val path : t -> string
   (** [path s] returns the path part of the Selector [s]. I.e. the part before any '?' character. *)
-  val get_query : t -> string option
-  (** [query s] returns the query part of the Selector [s].
-      I.e. the part after the first '?' character and before the fist '#' character, or an empty string if no '?' is found. *)
-  val get_fragment : t -> string option
+  val predicate : t -> string option
+  (** [predicate s] returns the predicate part of the Selector [s].
+      I.e. the substring after the first '?' character and before the first '[' or '#' character (if any).
+      None is returned if their is no such substring. *)
+  val properties : t -> string option
+  (** [properties s] returns the properties part of the Selector [s].
+      I.e. the substring enclosed between '[' and']' and which is after the first '?' character and before the fist '#' character (if any) ., or an empty string if no '?' is found.
+      None is returned if their is no such substring. *)
+  val fragment : t -> string option
   (** [fragment s] returns the fragment part of the Selector [s].
-      I.e. the part after the first '#', or an empty string if no '#' is found. *)
+      I.e. the part after the first '#', or None if no '#' is found. *)
 
+  val is_relative : t -> bool
+  (**[is_relative s] return true if the path part ofthe Selector [s] is relative (i.e. it's first character is not '/') *)
   val is_path_unique : t -> bool
   (** [is_path_unique s] returns true it the path part of Selector [s] doesn't contains any wildcard ('*'). *)
   val as_unique_path : t -> Path.t option
