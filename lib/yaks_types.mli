@@ -76,6 +76,10 @@ module Selector : sig
   (** [remove_matchin_prefix p s] checks if the Path [p] matches a substring prefixing the Selector [s].
       If there is such matching prefix in [s], a similar Selector than [s] is returned, but with this prefix removed
       from its path part. If there is no such matching, None is returned. *)
+  val covers : t -> t -> bool
+  (** [covers s1 s2] returns true if the selector s1 covers the selector s2, in 
+      other terms if the set of tuple denoted by s1 is a superset of the set of 
+      tuples denoted by s2 *)
 end [@@deriving show]
 
 module Value : sig 

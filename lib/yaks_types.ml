@@ -229,6 +229,23 @@ module Selector = struct
 
   let is_prefixed_by_path path selector = remove_matching_prefix path selector |> Apero.Option.is_some
 
+  let covers (sel1:t) (sel2:t) = 
+    let s1 = sel1.path in 
+    let s2 = sel2.path in 
+    let cs1 = Astring.cuts ~sep:"/" s1 in 
+    let cs2 = Astring.cuts ~sep:"/" s2 in 
+    let rec check_cover cs1 cs2 =
+      match cs1 with 
+      | h1::tl1 -> 
+        (match cs2 with 
+        | h2::tl2 -> 
+          if h1 = h2 then check_cover tl1 tl2
+          else if (h1 = "*") && (h2 <> "**") then check_cover tl1 tl2
+          else if h1 = "**" then true
+          else false
+        | _ -> false) 
+      | [] -> if cs2 = [] then true else false 
+    in check_cover cs1 cs2
 end
 
 
