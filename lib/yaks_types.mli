@@ -66,20 +66,20 @@ module Selector : sig
       It returns None otherwise. *)
 
   val is_matching_path : Path.t -> t -> bool
-  (** [is_matchind_path p s] returns true if the selector [s] fully matches the path [p].
+  (** [is_matching_path p s] returns true if the selector [s] fully matches the path [p].
       Note that only the path part of the selector is considered for the matching (not the query and the fragment) *)
+  val is_including_selector : subsel:t -> t -> bool
+  (** [is_including_selector subsel s] returns true if the selector [s] includes the selector [subsel].
+      I.e. if [subsel] matches a path p, [s] also matches p.  
+      Note that only the path part of the selectors are considered for the inclusion (not the query and the fragment) *)
   val is_prefixed_by_path : Path.t -> t -> bool
   (** [is_prefixed_by_path p s] returns true if the selector [s] partially matches the path [p].
       I.e. it exists a prefix of [s] that fully matches [p].
       Note that only the path part of the selector is considered for the matching (not the query and the fragment) *)
   val remove_matching_prefix : Path.t -> t -> t option
-  (** [remove_matchin_prefix p s] checks if the Path [p] matches a substring prefixing the Selector [s].
+  (** [remove_matching_prefix p s] checks if the Path [p] matches a substring prefixing the Selector [s].
       If there is such matching prefix in [s], a similar Selector than [s] is returned, but with this prefix removed
       from its path part. If there is no such matching, None is returned. *)
-  val covers : t -> t -> bool
-  (** [covers s1 s2] returns true if the selector s1 covers the selector s2, in 
-      other terms if the set of tuple denoted by s1 is a superset of the set of 
-      tuples denoted by s2 *)
 end [@@deriving show]
 
 module Value : sig 

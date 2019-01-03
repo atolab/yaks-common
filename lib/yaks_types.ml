@@ -133,57 +133,66 @@ module Selector = struct
     | Some slash -> with_index_range ~first:(start_pos s) ~last:(start_pos slash) @@ base s
     | None -> s
 
+  let rec check_matching p s =
+    let open Astring.Sub in
+    (* if selector is empty, path must be empty too *)
+    if is_empty s then is_empty p
+    (* if selector starts with '**' *)
+    else if is_prefix ~affix:double_wildcard s then
+      (* if selector is only "**" it matches all (if any) *)
+      if length s <= 2 then not @@ is_empty p
+      else (
+        (* get the next wildcard-free sub-string from selector and find it in path *)
+        let sub = with_range ~first:2 s |> get_prefix_before_wildcard in
+        match find_sub ~rev:true ~sub p with
+        | None -> false
+        | Some sub' ->
+          (* substring found; go on with remaining parts *)
+          let pat_tail = with_range ~first:(stop_pos sub') (base sub') in
+          let sel_tail = with_range ~first:(2+(length sub)) s in
+          check_matching pat_tail sel_tail)
+    (* if selector starts with '*' *)
+    else if is_prefix ~affix:simple_wildcard s then
+      let _ = Logs_lwt.debug (fun m -> m "----- check * with %a and %a" pp s pp p) in
+      (* if selector is only '*', it matches path if doesn't contain a '/' *)
+      if length s <= 1 then let _ = Logs_lwt.debug (fun m -> m "-------- last char is *") in (not @@ is_empty p) && (not @@ exists is_slash p)
+      else (
+        (* get the next wildcard-free and slash-free sub-string from selector and find it in next path' segment *)
+        let sub_sel = with_range ~first:1 s |> get_prefix_before_wildcard_until_slash in
+        let sub_pat = get_prefix_until_slash p in
+        let _ = Logs_lwt.debug (fun m -> m "-------- sub_sel=%a and sub_path=%a" pp sub_sel pp sub_pat) in
+        match find_sub ~sub:sub_sel sub_pat with
+        | None -> let _ = Logs_lwt.debug (fun m -> m "-------- sub_sel not found in sub_pat") in false
+        | Some sub' ->
+          (* substring found; go on with remaining parts *)
+          let pat_tail = with_range ~first:(stop_pos sub') (base sub') in
+          let sel_tail = with_range ~first:(1+(length sub_sel)) s in
+          let _ = Logs_lwt.debug (fun m -> m "-------- sub_sel found in sub_pat . Go on with %a and %a" pp sel_tail pp pat_tail) in
+          check_matching pat_tail sel_tail)
+    (* selector doesn't start with wildcard *)
+    else
+      (* get the next wildcard-free sub-string from selector and check is path starts with this *)
+      let sub = get_prefix_before_wildcard s in
+      if is_prefix ~affix:sub p then
+        (* path starts with substring; go on with remaining parts *)
+        let first = length sub in
+        check_matching (with_range ~first p) (with_range ~first s)
+      else false
+
   let is_matching_path pat sel =
     let open Astring.Sub in
-    let rec check_matching p s =
-      (* if selector is empty, path must be empty too *)
-      if is_empty s then is_empty p
-      (* if selector starts with '**' *)
-      else if is_prefix ~affix:double_wildcard s then
-        (* if selector is only "**" it matches all (if any) *)
-        if length s <= 2 then not @@ is_empty p
-        else (
-          (* get the next wildcard-free sub-string from selector and find it in path *)
-          let sub = with_range ~first:2 s |> get_prefix_before_wildcard in
-          match find_sub ~rev:true ~sub p with
-          | None -> false
-          | Some sub' ->
-            (* substring found; go on with remaining parts *)
-            let pat_tail = with_range ~first:(stop_pos sub') (base sub') in
-            let sel_tail = with_range ~first:(2+(length sub)) s in
-            check_matching pat_tail sel_tail)
-      (* if selector starts with '*' *)
-      else if is_prefix ~affix:simple_wildcard s then
-        let _ = Logs_lwt.debug (fun m -> m "----- check * with %a and %a" pp s pp p) in
-        (* if selector is only '*', it matches path if doesn't contain a '/' *)
-        if length s <= 1 then let _ = Logs_lwt.debug (fun m -> m "-------- last char is *") in (not @@ is_empty p) && (not @@ exists is_slash p)
-        else (
-          (* get the next wildcard-free and slash-free sub-string from selector and find it in next path' segment *)
-          let sub_sel = with_range ~first:1 s |> get_prefix_before_wildcard_until_slash in
-          let sub_pat = get_prefix_until_slash p in
-          let _ = Logs_lwt.debug (fun m -> m "-------- sub_sel=%a and sub_path=%a" pp sub_sel pp sub_pat) in
-          match find_sub ~sub:sub_sel sub_pat with
-          | None -> let _ = Logs_lwt.debug (fun m -> m "-------- sub_sel not found in sub_pat") in false
-          | Some sub' ->
-            (* substring found; go on with remaining parts *)
-            let pat_tail = with_range ~first:(stop_pos sub') (base sub') in
-            let sel_tail = with_range ~first:(1+(length sub_sel)) s in
-            let _ = Logs_lwt.debug (fun m -> m "-------- sub_sel found in sub_pat . Go on with %a and %a" pp sel_tail pp pat_tail) in
-            check_matching pat_tail sel_tail)
-      (* selector doesn't start with wildcard *)
-      else
-        (* get the next wildcard-free sub-string from selector and check is path starts with this *)
-        let sub = get_prefix_before_wildcard s in
-        if is_prefix ~affix:sub p then
-          (* path starts with substring; go on with remaining parts *)
-          let first = length sub in
-          check_matching (with_range ~first p) (with_range ~first s)
-        else false
-    in 
     let sel' = v @@ path sel in
     let pat' = v @@ Path.to_string pat in
     let result = check_matching pat' sel' in
     let _ = Logs_lwt.debug (fun m -> m "[Yco] Selector.is_matching_path %a %a : %b" pp pat' pp sel' result) in
+    result
+
+  let is_including_selector ~subsel sel =
+    let open Astring.Sub in
+    let sel' = v @@ path sel in
+    let subsel' = v @@ path subsel in
+    let result = check_matching subsel' sel' in
+    let _ = Logs_lwt.debug (fun m -> m "[Yco] Selector.is_including_selector %a %a : %b" pp subsel' pp sel' result) in
     result
 
   let remove_matching_prefix pat sel =
@@ -229,23 +238,6 @@ module Selector = struct
 
   let is_prefixed_by_path path selector = remove_matching_prefix path selector |> Apero.Option.is_some
 
-  let covers (sel1:t) (sel2:t) = 
-    let s1 = sel1.path in 
-    let s2 = sel2.path in 
-    let cs1 = Astring.cuts ~sep:"/" s1 in 
-    let cs2 = Astring.cuts ~sep:"/" s2 in 
-    let rec check_cover cs1 cs2 =
-      match cs1 with 
-      | h1::tl1 -> 
-        (match cs2 with 
-        | h2::tl2 -> 
-          if h1 = h2 then check_cover tl1 tl2
-          else if (h1 = "*") && (h2 <> "**") then check_cover tl1 tl2
-          else if h1 = "**" then true
-          else false
-        | _ -> false) 
-      | [] -> if cs2 = [] then true else false 
-    in check_cover cs1 cs2
 end
 
 
