@@ -253,7 +253,7 @@ module Value = struct
   type sql_column_names = string list
 
   type t  = 
-    | RawValue of Lwt_bytes.t 
+    | RawValue of (string option * Lwt_bytes.t)
     | StringValue of string
     | PropertiesValue of properties
     | JSonValue of string
@@ -299,15 +299,17 @@ module Value = struct
     | row::col::[] -> string_to_list row , Some (String.split_on_char sql_val_sep col)
     | _ -> raise @@ YException (`UnsupportedTranscoding (`Msg ("String to SQL of  "^s)))
 
-  let to_raw_encoding = function
+  let to_raw_encoding v =
+    let encoding_descr = encoding_to_string @@ encoding v in
+    match v with
     | RawValue _ as v -> Apero.Result.ok @@ v
-    | StringValue s -> Apero.Result.ok @@ RawValue (Lwt_bytes.of_string s)
-    | PropertiesValue p -> Apero.Result.ok @@ RawValue (Lwt_bytes.of_string @@ Properties.to_string p)
-    | JSonValue s -> Apero.Result.ok @@ RawValue (Lwt_bytes.of_string s)
-    | SqlValue v  -> Apero.Result.ok @@ RawValue (Lwt_bytes.of_string @@ sql_to_string v)
+    | StringValue s -> Apero.Result.ok @@ RawValue (Some encoding_descr, Lwt_bytes.of_string s)
+    | PropertiesValue p -> Apero.Result.ok @@ RawValue (Some encoding_descr, Lwt_bytes.of_string @@ Properties.to_string p)
+    | JSonValue s -> Apero.Result.ok @@ RawValue (Some encoding_descr, Lwt_bytes.of_string s)
+    | SqlValue v  -> Apero.Result.ok @@ RawValue (Some encoding_descr, Lwt_bytes.of_string @@ sql_to_string v)
 
   let to_string_encoding = function 
-    | RawValue r  -> Apero.Result.ok @@ StringValue (Lwt_bytes.to_string r)
+    | RawValue (_, r)  -> Apero.Result.ok @@ StringValue (Lwt_bytes.to_string r)  (* @TODO: base64 conversion and encoding description in string ? *)
     | StringValue _ as v  -> Apero.Result.ok @@ v
     | PropertiesValue p -> Apero.Result.ok @@ StringValue (Properties.to_string p)
     | JSonValue s -> Apero.Result.ok @@ StringValue s
@@ -330,7 +332,7 @@ module Value = struct
 
 
   let to_properties_encoding = function
-    | RawValue r  -> Apero.Result.ok @@ PropertiesValue (Lwt_bytes.to_string r |> Properties.of_string)
+    | RawValue (_,r)  -> Apero.Result.ok @@ PropertiesValue (Lwt_bytes.to_string r |> Properties.of_string)  (* @TODO: base64 conversion and encoding description as property ? *)
     | StringValue s  -> Apero.Result.ok @@ PropertiesValue (Properties.of_string s)
     | PropertiesValue _ as v -> Apero.Result.ok v
     | JSonValue s -> Apero.Result.ok @@ PropertiesValue (properties_from_json s)
@@ -350,7 +352,7 @@ module Value = struct
   let to_json_encoding = 
     let open Yojson.Basic in
     function
-    | RawValue r  -> Apero.Result.ok @@ JSonValue (to_string @@ `String (Lwt_bytes.to_string r))  (* @TODO: base-64 encoding? *)
+    | RawValue (_, r)  -> Apero.Result.ok @@ JSonValue (to_string @@ `String (Lwt_bytes.to_string r))  (* @TODO: base64 conversion and and encoding description as json attribute ? *)
     | StringValue s  -> Apero.Result.ok @@ JSonValue (to_string @@ `String s)
     | PropertiesValue p -> Apero.Result.ok @@ JSonValue (to_string @@ json_from_properties p)
     | JSonValue _ as v -> Apero.Result.ok @@ v
@@ -368,7 +370,7 @@ module Value = struct
     fun (keys, values) -> (values, Some keys)
 
   let to_sql_encoding = function
-    | RawValue r -> Apero.Result.ok @@ SqlValue (sql_of_string (Lwt_bytes.to_string r))
+    | RawValue (_, r) -> Apero.Result.ok @@ SqlValue (sql_of_string (Lwt_bytes.to_string r))  (* @TODO: base64 conversion and and encoding description as sql column ? *)
     | StringValue s  -> Apero.Result.ok @@ SqlValue (sql_of_string s)
     | PropertiesValue p -> Apero.Result.ok @@ SqlValue (sql_from_properties p)
     | JSonValue s -> Apero.Result.ok @@ SqlValue (sql_from_json s)
@@ -383,7 +385,9 @@ module Value = struct
 
   let of_string s e = transcode (StringValue s)  e
   let to_string  = function 
-    | RawValue r -> Lwt_bytes.to_string r
+    | RawValue (descr,r) ->
+      let d = Option.get_or_default (Option.map descr (fun d -> d^": ")) "" in
+      d^(Lwt_bytes.to_string r)   (* @TODO: base64 conversion *)
     | StringValue s -> s
     | PropertiesValue p -> Properties.to_string p
     | JSonValue j -> j 

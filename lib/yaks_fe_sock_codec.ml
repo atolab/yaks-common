@@ -65,7 +65,8 @@ let encode_value v buf =
   let open Value in
   let encode_value_encoding e = IOBuf.put_char (char_of_int @@ value_encoding_to_int e) buf in
   match v with
-  | RawValue b -> encode_value_encoding RAW
+  | RawValue (descr, b) -> encode_value_encoding RAW
+    >>= fun buf -> Apero.encode_string (Option.get_or_default descr "") buf
     >>= fun buf -> Apero.encode_bytes (IOBuf.from_bytes b) buf
   | StringValue s -> encode_value_encoding STRING
     >>= fun buf -> Apero.encode_string s buf
@@ -83,8 +84,10 @@ let decode_value buf =
   let open Value in
   IOBuf.get_char buf
   >>= fun (encoding, buf) -> match int_to_value_encoding @@ int_of_char encoding with
-    | Some RAW -> Apero.decode_bytes buf
-      >>= fun (b, buf) -> Result.ok (RawValue (IOBuf.to_bytes b), buf)
+    | Some RAW -> Apero.decode_string buf
+      >>= fun (descr, buf) -> Apero.decode_bytes buf
+      >>= fun (b, buf) -> let d = if String.length descr > 0 then Some descr else None in
+      Result.ok (RawValue (d, IOBuf.to_bytes b), buf)
     | Some STRING -> Apero.decode_string buf
       >>= fun (s, buf) -> Result.ok (StringValue s, buf)
     | Some PROPERTIES -> Apero.decode_string buf
