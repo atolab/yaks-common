@@ -83,7 +83,7 @@ module Selector : sig
 end [@@deriving show]
 
 module Value : sig 
-  type encoding = 
+  type encoding =
     | Raw_Encoding
     | String_Encoding 
     | Properties_encoding
@@ -93,7 +93,7 @@ module Value : sig
   type sql_row = string list
   type sql_column_names = string list
 
-  type t  = 
+  type t =
     | RawValue of (string option * Lwt_bytes.t)
     | StringValue of string
     | PropertiesValue of Apero.properties

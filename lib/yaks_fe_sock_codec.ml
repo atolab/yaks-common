@@ -144,14 +144,14 @@ let decode_body (mid:message_id) (flags:char) (buf: IOBuf.t) =
     decode_path buf >>> fun (path, buf) -> YPath path, buf
   | PUT | UPDATE | VALUES ->
     decode_pathvaluelist buf >>> fun (pvs, buf) -> YPathValueList pvs, buf
-  | GET | SUB ->
+  | GET | EVAL | SUB ->
     decode_selector buf >>> fun (sel, buf) -> YSelector sel, buf  
   | UNSUB ->
     decode_string buf >>> fun (sid, buf) -> YSubscription sid, buf
   | NOTIFY ->
     decode_string buf >>= fun (sid, buf) ->
     decode_pathvaluelist buf >>> fun (pvs, buf) -> YNotification (sid, pvs), buf
-  | EVAL ->
+  | REG_EVAL | UNREG_EVAL ->
     decode_path buf >>> fun (path, buf) -> YPath path, buf
   | ERROR ->
     decode_vle buf >>> fun (errno, buf) -> YErrorInfo errno, buf
