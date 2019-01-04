@@ -6,7 +6,7 @@ module Path : sig
   (** [of_string s] returns [s] as a Path if it's valid. Otherwise it raises a [YException].
       Note that the Path's string is sanitized (i.e. it's trimmed meaningless '/' are removed) *)
   val of_string_opt : string -> t option
-  (** [of_string_opt s] returns [Some p] if [s] is a valid path. Otherwise it raises a [YException].
+  (** [of_string_opt s] returns [Some p] if [s] is a valid path. Otherwise it returns [None].
       Note that the Path's string is sanitized (i.e. it's trimmed and meaningless '/' are removed) *)
   val to_string : t -> string
   (** [to_string path] returns the [path] as a string. *)
@@ -30,10 +30,10 @@ module Selector : sig
   type t          
   val of_string : string -> t
   (** [of_string s] validate the format of the string [s] as a selector and returns a Selector if valid.
-      If the validation fails, an [YException] is raised. If [is_absolute] is true (default value) the string must start with '/' *)
+      If the validation fails, an [YException] is raised. *)
   val of_string_opt : string -> t option
   (** [of_string_opt s] validate the format of the string [s] as a selector and returns some Selector if valid.
-      If the validation fails, None is returned. If [is_absolute] is true (default value) the string must start with '/' *)
+      If the validation fails, None is returned. *)
   val to_string : t -> string
   (** [to_string s] return the Selector [s] as a string *)
   val of_path : Path.t -> t

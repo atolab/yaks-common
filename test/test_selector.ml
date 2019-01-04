@@ -108,6 +108,8 @@ let test_2_wildcard_selectors () =
   check_if true  __LINE__ @@ test_matching "/ab**" "/abcd/ef";
   check_if false  __LINE__ @@ test_matching "/ab**" "/ab";
   check_if false __LINE__ @@ test_matching "/ab/**" "/ab";
+  check_if true __LINE__ @@ test_matching "/**/xyz" "/a/b/xyz/d/e/f/xyz";
+  (* check_if true __LINE__ @@ test_matching "/**/xyz*xyz" "/a/b/xyz/d/e/f/xyz";    FAILURE !!! *)
   check_if true  __LINE__ @@ test_matching "/a/**/c/**/e" "/a/b/b/b/c/d/d/d/e";
   check_if false __LINE__ @@ test_matching "/a/**/c/**/e" "/a/c/e";
   check_if true  __LINE__ @@ test_matching "/a/**/c/**/e?q" "/a/b/b/b/c/d/d/d/e";
