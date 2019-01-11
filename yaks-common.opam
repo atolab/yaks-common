@@ -1,11 +1,12 @@
 opam-version: "2.0"
-version:"0.0.1"
-maintainer:   ["julien@adlink-labs.tech"]
-authors:      ["Angelo Corsaro" "Gabriele Baldoni" "Julien Enoch"]
+maintainer:   ["contact@adlink-labs.tech"]
+authors:      ["Angelo Corsaro" "Julien Enoch" "Olivier Hecart" "Gabriele Baldoni"]
 homepage:     "https://github.com/atolab/yaks-common"
 bug-reports:  "https://github.com/atolab/yaks-common/issues/"
 dev-repo:     "git://github.com/atolab/yaks-common.git"
+tags:         ["org:adlink-technology"]
 
+version:"0.2.0"
 license: "Apache-2.0"
 
 build: [
@@ -20,7 +21,7 @@ depends: [
   "lwt" 
   "ppx_deriving" 
   "lwt_ppx"
-  "apero-core" {>= "0.3.0"}
+  "apero-core" {>= "0.4.0"}
 ]
 
 synopsis : "YAKS Common OCaml library"
