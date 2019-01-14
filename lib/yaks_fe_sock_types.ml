@@ -102,3 +102,7 @@ let get_subscription_payload msg =
   | YSubscription s -> Some s
   | _ -> None 
 
+let get_error_info msg =
+  match msg.body with
+  | YErrorInfo code -> int_to_error_code @@ Vle.to_int code
+  | _ -> None

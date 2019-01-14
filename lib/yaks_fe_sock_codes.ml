@@ -40,6 +40,7 @@ type error_code =
 | FORBIDDEN [@id 403]
 | NOT_FOUND [@id 404]
 | PRECONDITION_FAILED [@id 412]
+| INTERNAL_SERVER_ERROR [@id 500]
 | NOT_IMPLEMENTED [@id 501]
 | INSUFFICIENT_STORAGE [@id 507]
 [@@uint16_t]]
