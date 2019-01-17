@@ -48,23 +48,17 @@ module Selector = struct
   (* from https://tools.ietf.org/html/rfc3986#appendix-B except that:
       - we don't allow '[' or ']' in the path part
       - the query part (after '?') is optional, but if set it must be composed of
-         - an optional predicate part not containing any '[' or ']'
-         - an optional properties part enclosed between '[' and ']'
+         - an optional predicate part not containing any '(' or ')'
+         - an optional properties part enclosed between '(' and ')'
     TODO: constrain regex for predicate, props and fragment (i.e. specify the separators such as '&', '='...)
    *)
-  (* let sel_regex =
-    let path = "[^][?#]+" in
-    let predicate = "[^][#]+" in
-    let properties = ".*" in
-    let fragment = ".*" in
-    Str.regexp @@ Printf.sprintf "^\\(%s\\)\\(\\?\\(%s\\)?\\(\\[\\(%s\\)\\]\\)?\\)?\\(#\\(%s\\)\\)?$" path predicate properties fragment *)
 
   let sel_regex =
     let path = "[^?#]+" in
-    let predicate = "[^][#]+" in
+    let predicate = "[^()#]+" in
     let properties = ".*" in
     let fragment = ".*" in
-    Str.regexp @@ Printf.sprintf "^\\(%s\\)\\(\\?\\(%s\\)?\\(\\[\\(%s\\)\\]\\)?\\)?\\(#\\(%s\\)\\)?$" path predicate properties fragment
+    Str.regexp @@ Printf.sprintf "^\\(%s\\)\\(\\?\\(%s\\)?\\((\\(%s\\))\\)?\\)?\\(#\\(%s\\)\\)?$" path predicate properties fragment
 
 
   let is_valid s = Str.string_match sel_regex s 0
@@ -90,7 +84,7 @@ module Selector = struct
     Printf.sprintf "%s%s%s%s%s" s.path 
       (if Option.is_some s.pred || Option.is_some s.props then "?" else "")
       (match s.pred with | Some(q) -> q | None -> "")
-      (match s.props with | Some(p) -> "["^p^"]" | None -> "")
+      (match s.props with | Some(p) -> "("^p^")" | None -> "")
       (match s.frag with | Some(f) -> "#"^f | None -> "")
 
   let of_path p = of_string @@ Path.to_string p
