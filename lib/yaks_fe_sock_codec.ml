@@ -4,36 +4,12 @@ open Yaks_types
 open Yaks_fe_sock_codes
 open Yaks_fe_sock_types
 
-let encode_property k v buf =
-  encode_string k buf
-  >>= fun buf ->
-  encode_string v buf
-
-let decode_property  buf = 
-  decode_string buf 
-  >>= fun (k, buf) -> 
-  decode_string buf 
-  >>= fun (v, buf) -> Result.ok (Property.make k v, buf)
-
 let decode_properties buf =
-  let rec get_remaining props length buf =
-    let open Result in
-    match length with
-    | 0 -> return (props, buf)
-    | _ ->
-      decode_property buf 
-      >>= (fun ((k,v), buf) -> get_remaining (Property.Map.add k v props) (length - 1) buf)
-  in
-  decode_vle buf
-  >>= (fun (length, buf) ->    
-      (get_remaining Property.Map.empty (Vle.to_int length) buf))
+  decode_string buf
+  >>= fun (s, buf) -> Result.ok (Properties.of_string s, buf)
 
 let encode_properties props buf =
-  (encode_vle (Vle.of_int (Property.Map.cardinal props)) buf)
-  |> Property.Map.fold (fun k v res -> match res with
-      | Ok buf -> encode_property k v buf
-      | Error e -> Error e) props
-
+  encode_string (Properties.to_string props) buf
 
 let encode_header h buf =  
   let id = char_of_int @@ message_id_to_int h.mid in   
