@@ -32,6 +32,7 @@ type value_encoding =
 [%%cenum
 type message_flags = 
 | PROPERTY [@id 0x01]
+| INCOMPLETE [@id 0x02]
 [@@uint8_t]]
 
 [%%cenum

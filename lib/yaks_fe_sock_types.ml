@@ -49,11 +49,8 @@ let make_header mid (mflags: message_flags list) corr_id properties =
   in 
   {mid; flags; corr_id; properties}
 
-let has_property_flag flags = (int_of_char flags) land 0x01 <> 0
-let get_encoding flags = 
-  match int_to_value_encoding @@ (int_of_char flags) land 0x18 with 
-  | Some e -> e 
-  | None -> ENCODING_INVALID
+let has_property_flag flags = (int_of_char flags) land (message_flags_to_int PROPERTY) <> 0
+let has_incomplete_flag flags = (int_of_char flags) land (message_flags_to_int INCOMPLETE) <> 0
 
 type payload = 
   | YEmpty

@@ -110,6 +110,8 @@ let decode_selector buf =
 let encode_pathvaluelist = encode_seq (encode_pair encode_path encode_value)
 let decode_pathvaluelist = decode_seq (decode_pair decode_path decode_value)
 
+let encode_pathvaluelist_safe = encode_seq_safe (encode_pair encode_path encode_value)
+
 
 let decode_body (mid:message_id) (flags:char) (buf: IOBuf.t) = 
   let _ = ignore flags in (* in case of further need... *)
@@ -153,3 +155,18 @@ let decode_message buf =
 let encode_message msg buf =
   encode_header msg.header buf
   >>= encode_body msg.body
+
+let encode_message_split msg buf =
+  match msg.body with
+  | YPathValueList pvs ->
+    let headerpos = IOBuf.position buf in
+    encode_header msg.header buf
+    >>= encode_pathvaluelist_safe pvs
+    >>= fun (buf, remain) ->
+      if List.length remain = 0 then Result.return (buf, None)
+      else
+        (* add INCOMPLE flag in message header *)
+        let flags = char_of_int ((int_of_char msg.header.flags) lor (message_flags_to_int INCOMPLETE)) in
+        IOBuf.overwrite_at (headerpos+1) (IOBuf.put_char flags) buf
+        >>= fun buf -> Result.return (buf, Some ({msg with body=YPathValueList remain}))
+  | _ -> encode_message msg buf >>> fun buf -> (buf, None)
