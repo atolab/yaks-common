@@ -163,7 +163,10 @@ let encode_message_split msg buf =
     encode_header msg.header buf
     >>= encode_pathvaluelist_safe pvs
     >>= fun (buf, remain) ->
-      if List.length remain = 0 then Result.return (buf, None)
+      if (List.length remain = List.length pvs) then
+        Result.fail @@ `IOError (`Msg (Printf.sprintf "Buffer too small (%d bytes) to encode the Value for Path %s"
+          (IOBuf.capacity buf) (List.hd pvs |> fun (p,_) -> Path.to_string p)))
+      else if List.length remain = 0 then Result.return (buf, None)
       else
         (* add INCOMPLE flag in message header *)
         let flags = char_of_int ((int_of_char msg.header.flags) lor (message_flags_to_int INCOMPLETE)) in
