@@ -46,7 +46,7 @@ module Selector = struct
       (match s.props with | Some(p) -> "("^p^")" | None -> "")
       (match s.frag with | Some(f) -> "#"^f | None -> "")
 
-  let of_path p = { path=PathExpr.of_path p; pred=None; props=None; frag=None }
+  let of_path ?predicate ?properties ?fragment p = { path=PathExpr.of_path p; pred=predicate; props=properties; frag=fragment }
 
   let path s = PathExpr.to_string s.path
 
@@ -55,6 +55,12 @@ module Selector = struct
   let properties s = s.props
 
   let fragment s = s.frag
+
+  let optional_part s = 
+    Printf.sprintf "%s%s%s"
+      (match s.pred with | Some(q) -> q | None -> "")
+      (match s.props with | Some(p) -> "("^p^")" | None -> "")
+      (match s.frag with | Some(f) -> "#"^f | None -> "")
 
   let is_relative sel = PathExpr.is_relative sel.path
 

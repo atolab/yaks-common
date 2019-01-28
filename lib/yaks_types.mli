@@ -12,8 +12,9 @@ module Selector : sig
       If the validation fails, None is returned. *)
   val to_string : t -> string
   (** [to_string s] return the Selector [s] as a string *)
-  val of_path : Path.t -> t
-  (** [of_path p] returns a Selector with its path equal to [p] and without predicate, properties nor fragment *)
+  val of_path : ?predicate:string -> ?properties:string -> ?fragment:string -> Path.t -> t
+  (** [of_path predicate properties fragment p] returns a Selector with its path equal to [p] with respectively
+      the [predicate], [properties] and [fragment] optionally set *)
 
   val path : t -> string
   (** [path s] returns the path part of the Selector [s]. I.e. the part before any '?' character. *)
@@ -28,6 +29,8 @@ module Selector : sig
   val fragment : t -> string option
   (** [fragment s] returns the fragment part of the Selector [s].
       I.e. the part after the first '#', or None if no '#' is found. *)
+  val optional_part : t -> string
+  (** [optional_part s] returns the part after the '?' character (i.e. predicate + properties + fragment) or an empty string if there is no '?' in the Selector *)
 
   val is_relative : t -> bool
   (**[is_relative s] return true if the path part ofthe Selector [s] is relative (i.e. it's first character is not '/') *)
