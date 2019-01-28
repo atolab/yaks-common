@@ -6,7 +6,7 @@ bug-reports:  "https://github.com/atolab/yaks-common/issues/"
 dev-repo:     "git://github.com/atolab/yaks-common.git"
 tags:         ["org:adlink-technology"]
 
-version:"0.2.1"
+version:"0.2.2"
 license: "Apache-2.0"
 
 build: [
