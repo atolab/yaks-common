@@ -40,7 +40,6 @@ let test_validity () =
   check_if true  __LINE__ @@ test_selector "/a*" "/a*" None None None;
   check_if true  __LINE__ @@ test_selector "/**" "/**" None None None;
   check_if true  __LINE__ @@ test_selector "/**/" "/**" None None None;
-  check_if true  __LINE__ @@ test_selector "/a**" "/a**" None None None;
   check_if true  __LINE__ @@ test_selector "/a/b?" "/a/b" None None None;
   check_if true  __LINE__ @@ test_selector "/a/b?q" "/a/b" (Some "q") None None;
   check_if true  __LINE__ @@ test_selector "/a/b?q1?q2" "/a/b" (Some "q1?q2") None None;
@@ -62,6 +61,7 @@ let test_validity () =
   check_if true  __LINE__ @@ test_selector "////a//b///c/" "/a/b/c" None None None;
   check_if false __LINE__ @@ test_selector "" "" None None None;
   check_if false __LINE__ @@ test_selector "abc" "" None None None;
+  check_if false  __LINE__ @@ test_selector "/a**" "/a**" None None None;
   ()
 
 let test_simple_selectors () =
@@ -84,7 +84,7 @@ let test_wildcard_selectors () =
   check_if false __LINE__ @@ test_matching "/*" "xxx";
   check_if true  __LINE__ @@ test_matching "/ab*" "/abcd";
   check_if true  __LINE__ @@ test_matching "/ab*d" "/abcd";
-  check_if false  __LINE__ @@ test_matching "/ab*" "/ab";
+  check_if true  __LINE__ @@ test_matching "/ab*" "/ab";
   check_if false __LINE__ @@ test_matching "/ab/*" "/ab";
   check_if true  __LINE__ @@ test_matching "/a/*/c/*/e" "/a/b/c/d/e";
   check_if true  __LINE__ @@ test_matching "/a/*b/c/*d/e" "/a/xb/c/xd/e";
@@ -104,22 +104,18 @@ let test_2_wildcard_selectors () =
   check_if true  __LINE__ @@ test_matching "/**" "/a/b/c";
   check_if true  __LINE__ @@ test_matching "/**" "/a/b/c/";
   check_if true  __LINE__ @@ test_matching "/**/" "/a/b/c";
-  check_if false __LINE__ @@ test_matching "/**/" "/";
-  check_if true  __LINE__ @@ test_matching "/ab**" "/abcd/ef";
-  check_if false  __LINE__ @@ test_matching "/ab**" "/ab";
-  check_if false __LINE__ @@ test_matching "/ab/**" "/ab";
-  check_if true __LINE__ @@ test_matching "/**/xyz" "/a/b/xyz/d/e/f/xyz";
-  (* check_if true __LINE__ @@ test_matching "/**/xyz*xyz" "/a/b/xyz/d/e/f/xyz";    FAILURE !!! *)
+  check_if true  __LINE__ @@ test_matching "/**/" "/";
+  check_if true  __LINE__ @@ test_matching "/ab*/**" "/abcd/ef";
+  check_if true  __LINE__ @@ test_matching "/ab/**" "/ab";
+  check_if true  __LINE__ @@ test_matching "/**/xyz" "/a/b/xyz/d/e/f/xyz";
+  check_if true  __LINE__ @@ test_matching "/**/xyz/**/xyz" "/a/b/xyz/d/e/f/xyz";
   check_if true  __LINE__ @@ test_matching "/a/**/c/**/e" "/a/b/b/b/c/d/d/d/e";
-  check_if false __LINE__ @@ test_matching "/a/**/c/**/e" "/a/c/e";
+  check_if true __LINE__ @@ test_matching "/a/**/c/**/e" "/a/c/e";
   check_if true  __LINE__ @@ test_matching "/a/**/c/**/e?q" "/a/b/b/b/c/d/d/d/e";
   check_if true  __LINE__ @@ test_matching "/a/**/c/**/e#f" "/a/b/b/b/c/d/d/d/e";
   check_if true  __LINE__ @@ test_matching "/a/**/c/**/e?q#f" "/a/b/b/b/c/d/d/d/e";
   check_if true  __LINE__ @@ test_matching "/a/**/c/*/e/*" "/a/b/b/b/c/d/d/c/d/e/f";
   check_if false __LINE__ @@ test_matching "/a/**/c/*/e/*" "/a/b/b/b/c/d/d/c/d/d/e/f";
-  check_if false __LINE__ @@ test_matching "/ab**cd" "/abxxcxxc/d";
-  check_if true  __LINE__ @@ test_matching "/ab**cd" "/abxxcxx/cd";
-  check_if false __LINE__ @@ test_matching "/ab*cd" "/abxxcxxcdx";
   List.iter (fun c -> let arg = Printf.sprintf "/%c" c in check_if true __LINE__ ~arg @@ test_matching "/**" arg) acceptable_chars;
   ()
 
