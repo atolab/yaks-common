@@ -15,6 +15,8 @@ module Selector : sig
   val of_path : ?predicate:string -> ?properties:string -> ?fragment:string -> Path.t -> t
   (** [of_path predicate properties fragment p] returns a Selector with its path equal to [p] with respectively
       the [predicate], [properties] and [fragment] optionally set *)
+  val with_path : Path.t -> t -> t
+  (** [with_path p s] returns a copy of the Selector [s] but with its path set to [p] *)
 
   val path : t -> string
   (** [path s] returns the path part of the Selector [s]. I.e. the part before any '?' character. *)

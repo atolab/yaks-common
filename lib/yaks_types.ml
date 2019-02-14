@@ -48,6 +48,8 @@ module Selector = struct
 
   let of_path ?predicate ?properties ?fragment p = { path=PathExpr.of_path p; pred=predicate; props=properties; frag=fragment }
 
+  let with_path p s = { s with path=PathExpr.of_path p }
+
   let path s = PathExpr.to_string s.path
 
   let predicate s = s.pred
