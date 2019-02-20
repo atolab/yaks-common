@@ -78,7 +78,7 @@ module Value : sig
   type sql_column_names = string list
 
   type t =
-    | RawValue of (string option * Lwt_bytes.t)
+    | RawValue of (string option * bytes)
     | StringValue of string
     | PropertiesValue of Apero.properties
     | JSonValue of string
