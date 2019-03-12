@@ -89,12 +89,15 @@ end
 
 
 module Value = struct 
+  [%%cenum
   type encoding = 
-    | Raw_Encoding
-    | String_Encoding
-    | Properties_encoding
-    | Json_Encoding  
-    | Sql_Encoding  
+    | RAW          [@id  0x00]
+    (* | Custom_Encoding       [@id  0x01] *)
+    | STRING       [@id  0x02]
+    | PROPERTIES   [@id  0x03]
+    | JSON         [@id  0x04]
+    | SQL          [@id  0x05]
+  [@@uint8_t]]
 
   type sql_row = string list
   type sql_column_names = string list
@@ -109,25 +112,11 @@ module Value = struct
   let update _ _ = Apero.Result.fail `UnsupportedOperation
 
   let encoding = function 
-    | RawValue _ -> Raw_Encoding
-    | StringValue _ -> String_Encoding
-    | PropertiesValue _ -> Properties_encoding
-    | JSonValue _ -> Json_Encoding
-    | SqlValue _ -> Sql_Encoding
-
-  let encoding_to_string = function 
-    | Raw_Encoding -> "RAW"
-    | String_Encoding -> "STRING"
-    | Properties_encoding -> "PROPS"
-    | Json_Encoding -> "JSON"
-    | Sql_Encoding -> "SQL"
-
-  let encoding_of_string s =
-    if s = "STRING" then String_Encoding
-    else if s = "PROPS" then Properties_encoding
-    else if s = "JSON" then Json_Encoding
-    else if s = "SQL" then Sql_Encoding
-    else Raw_Encoding
+    | RawValue _ -> RAW
+    | StringValue _ -> STRING
+    | PropertiesValue _ -> PROPERTIES
+    | JSonValue _ -> JSON
+    | SqlValue _ -> SQL
 
   let sql_val_sep = ',' (* Char.chr 31 *) (* US - unit separator *)
   let sql_val_sep_str = String.make 1 sql_val_sep
@@ -224,11 +213,11 @@ module Value = struct
     | SqlValue _ as v -> Apero.Result.ok @@ v
 
   let transcode v = function   
-    | Raw_Encoding -> to_raw_encoding v
-    | String_Encoding -> to_string_encoding v
-    | Properties_encoding -> to_properties_encoding v
-    | Json_Encoding -> to_json_encoding v
-    | Sql_Encoding -> to_sql_encoding v
+    | RAW -> to_raw_encoding v
+    | STRING -> to_string_encoding v
+    | PROPERTIES -> to_properties_encoding v
+    | JSON -> to_json_encoding v
+    | SQL -> to_sql_encoding v
 
   let of_string s e = transcode (StringValue s)  e
   let to_string  = function 

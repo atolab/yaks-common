@@ -67,12 +67,15 @@ module Selector : sig
 end [@@deriving show]
 
 module Value : sig 
+  [%%cenum
   type encoding =
-    | Raw_Encoding
-    | String_Encoding 
-    | Properties_encoding
-    | Json_Encoding
-    | Sql_Encoding
+    | RAW          [@id  0x00]
+    (* | CUSTOM       [@id  0x01] *)
+    | STRING       [@id  0x02]
+    | PROPERTIES   [@id  0x03]
+    | JSON         [@id  0x04]
+    | SQL          [@id  0x05]
+  [@@uint8_t]]
 
   type sql_row = string list
   type sql_column_names = string list
@@ -87,8 +90,6 @@ module Value : sig
 
   val update : t -> t -> (t, yerror) Apero.Result.t
   val encoding : t -> encoding
-  val encoding_to_string : encoding -> string
-  val encoding_of_string : string -> encoding
   val transcode : t -> encoding -> (t, yerror) Apero.Result.t   
   val of_string : string -> encoding -> (t, yerror) Apero.Result.t 
   val to_string : t -> string
