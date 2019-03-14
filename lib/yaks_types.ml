@@ -109,7 +109,7 @@ module Value = struct
     | JSonValue of string
     | SqlValue of (sql_row * sql_column_names option)
 
-  let update _ _ = Apero.Result.fail `UnsupportedOperation
+  let update ~delta _ = ignore delta; Apero.Result.fail `UnsupportedOperation
 
   let encoding = function 
     | RawValue _ -> RAW
@@ -230,3 +230,22 @@ module Value = struct
     | SqlValue s -> sql_to_string s
 
 end
+
+include Yaks_time
+
+module TimedValue = struct
+  type t = { time:Timestamp.t; value:Value.t }
+
+  let update ~delta tv =
+    let open Result.Infix in
+    Value.update tv.value ~delta:delta.value >>> fun v -> { time=delta.time; value=v }
+
+  let preceeds ~first ~second = Timestamp.compare first.time second.time < 0
+  (** [preceeds first second] returns true if timestamp of [first] < timestamp of [second] *)
+
+end
+
+type change =
+  | Put of TimedValue.t
+  | Update of TimedValue.t
+  | Remove of Timestamp.t

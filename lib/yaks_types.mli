@@ -88,9 +88,32 @@ module Value : sig
     | SqlValue of (sql_row * sql_column_names option)
 
 
-  val update : t -> t -> (t, yerror) Apero.Result.t
-  val encoding : t -> encoding
-  val transcode : t -> encoding -> (t, yerror) Apero.Result.t   
   val of_string : string -> encoding -> (t, yerror) Apero.Result.t 
+  (** [of_string s e] creates a new value from the string [s] and the encoding [e] *)
   val to_string : t -> string
+  (** [to_string v] returns a string representation of the value [v] *)
+  val encoding : t -> encoding
+  (** [encoding v] returns the encoding of the value [v] *)
+  val transcode : t -> encoding -> (t, yerror) Apero.Result.t
+  (** [transcode v e] transcodes the value [v] to the encoding [e] and returns the resulting value *)
+
+  val update : delta:t -> t -> (t, yerror) Apero.Result.t
+  (** [update delta v] tries to update the value [v] with the partial value [delta].
+      If [delta] has a different encoding than [v], it tries to {! transcode} [delta] into the same encoding thant [v] *)
 end
+
+module HLC = Yaks_time.HLC
+module Timestamp = Yaks_time.Timestamp
+module Time = Yaks_time.Time
+
+module TimedValue : sig
+  type t = { time:Timestamp.t; value:Value.t }
+
+  val update : delta:t -> t -> (t, yerror) Apero.Result.t
+  val preceeds : first:t -> second:t -> bool
+end
+
+type change =
+  | Put of TimedValue.t
+  | Update of TimedValue.t
+  | Remove of Timestamp.t
