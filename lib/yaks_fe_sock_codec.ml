@@ -2,6 +2,7 @@ open Apero
 open Yaks_types
 open Yaks_fe_sock_codes
 open Yaks_fe_sock_types
+open Yaks_common_errors
 
 let decode_properties buf =
   decode_string buf
@@ -84,6 +85,25 @@ let decode_value buf =
     | Some _ -> raise @@ Exception(`InvalidFormat (`Msg ("Unkown encoding: "^(int_of_char encoding |> string_of_int))))
     | None -> raise @@ Exception(`InvalidFormat `NoMsg)
 
+let encode_timedvalue (tv:TimedValue.t) buf =
+  Timestamp.encode tv.time buf;
+  encode_value tv.value buf
+let decode_timedvalue buf =
+  let time = Timestamp.decode buf in
+  let value = decode_value buf in
+  TimedValue.{time; value}
+
+let encode_change c buf =
+  match c with
+  | Put tv    -> Abuf.write_byte 'P' buf; encode_timedvalue tv buf
+  | Update tv -> Abuf.write_byte 'U' buf; encode_timedvalue tv buf
+  | Remove t  -> Abuf.write_byte 'R' buf; Timestamp.encode t buf
+let decode_change buf =
+  match Abuf.read_byte buf with
+  | 'P' -> let tv = decode_timedvalue buf in Put tv
+  | 'U' -> let tv = decode_timedvalue buf in Update tv
+  | 'R' -> let t = Timestamp.decode buf in Remove t
+  | c -> raise @@ YException (`InternalError (`Msg (Printf.sprintf "Error decoding change: unknown char for change: %c" c)))
 
 let decode_pair decode_fst decode_snd buf = 
   decode_fst buf 
@@ -115,17 +135,19 @@ let decode_pathvaluelist = decode_seq (decode_pair decode_path decode_value)
 
 let encode_pathvaluelist_safe = encode_seq_safe (encode_pair encode_path encode_value)
 
+let encode_pathchangelist = encode_seq (encode_pair encode_path encode_change)
+let decode_pathchangelist = decode_seq (decode_pair decode_path decode_change)
 
 let decode_body (mid:message_id) (flags:char) (buf: Abuf.t) = 
   let _ = ignore flags in (* in case of further need... *)
   match mid with 
   | LOGIN | LOGOUT | OK   -> YEmpty
-  | WORKSPACE | DELETE    -> decode_path buf |> fun path -> YPath path
+  | WORKSPACE | DELETE
+  | REG_EVAL | UNREG_EVAL -> decode_path buf |> fun path -> YPath path
   | PUT | UPDATE | VALUES -> decode_pathvaluelist buf |> fun pvs -> YPathValueList pvs
   | GET | EVAL | SUB      -> decode_selector buf |> fun sel -> YSelector sel
   | UNSUB                 -> decode_string buf |> fun sid -> YSubscription sid
-  | NOTIFY                -> decode_string buf |> fun sid -> decode_pathvaluelist buf |> fun pvs -> YNotification (sid, pvs)
-  | REG_EVAL | UNREG_EVAL -> decode_path buf |> fun path -> YPath path
+  | NOTIFY                -> decode_string buf |> fun sid -> decode_pathchangelist buf |> fun pcs -> YNotification (sid, pcs)
   | ERROR                 -> decode_vle buf |> fun errno -> YErrorInfo errno
 
 let encode_body body buf = 
@@ -135,7 +157,7 @@ let encode_body body buf =
   | YSelector s              -> encode_selector s buf
   | YPathValueList pvs       -> encode_pathvaluelist pvs buf
   | YSubscription s          -> encode_string s buf
-  | YNotification (sid, pvs) -> encode_string sid buf; encode_pathvaluelist pvs buf
+  | YNotification (sid, pcs) -> encode_string sid buf; encode_pathchangelist pcs buf
   | YErrorInfo (code)        -> encode_vle code buf
 
 

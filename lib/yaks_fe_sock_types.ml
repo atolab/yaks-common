@@ -58,7 +58,7 @@ type payload =
   | YSelector of Selector.t
   | YPathValueList of (Path.t * Value.t) list
   | YSubscription of string
-  | YNotification of string * (Path.t * Value.t) list
+  | YNotification of string * (Path.t * change) list
   | YErrorInfo of Vle.t
 
 let error_info_to_string vle =

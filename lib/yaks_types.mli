@@ -67,12 +67,15 @@ module Selector : sig
 end [@@deriving show]
 
 module Value : sig 
+  [%%cenum
   type encoding =
-    | Raw_Encoding
-    | String_Encoding 
-    | Properties_encoding
-    | Json_Encoding
-    | Sql_Encoding
+    | RAW          [@id  0x00]
+    (* | CUSTOM       [@id  0x01] *)
+    | STRING       [@id  0x02]
+    | PROPERTIES   [@id  0x03]
+    | JSON         [@id  0x04]
+    | SQL          [@id  0x05]
+  [@@uint8_t]]
 
   type sql_row = string list
   type sql_column_names = string list
@@ -85,11 +88,32 @@ module Value : sig
     | SqlValue of (sql_row * sql_column_names option)
 
 
-  val update : t -> t -> (t, yerror) Apero.Result.t
-  val encoding : t -> encoding
-  val encoding_to_string : encoding -> string
-  val encoding_of_string : string -> encoding
-  val transcode : t -> encoding -> (t, yerror) Apero.Result.t   
   val of_string : string -> encoding -> (t, yerror) Apero.Result.t 
+  (** [of_string s e] creates a new value from the string [s] and the encoding [e] *)
   val to_string : t -> string
+  (** [to_string v] returns a string representation of the value [v] *)
+  val encoding : t -> encoding
+  (** [encoding v] returns the encoding of the value [v] *)
+  val transcode : t -> encoding -> (t, yerror) Apero.Result.t
+  (** [transcode v e] transcodes the value [v] to the encoding [e] and returns the resulting value *)
+
+  val update : delta:t -> t -> (t, yerror) Apero.Result.t
+  (** [update delta v] tries to update the value [v] with the partial value [delta].
+      If [delta] has a different encoding than [v], it tries to {! transcode} [delta] into the same encoding thant [v] *)
 end
+
+module HLC = Yaks_time.HLC
+module Timestamp = Yaks_time.Timestamp
+module Time = Yaks_time.Time
+
+module TimedValue : sig
+  type t = { time:Timestamp.t; value:Value.t }
+
+  val update : delta:t -> t -> (t, yerror) Apero.Result.t
+  val preceeds : first:t -> second:t -> bool
+end
+
+type change =
+  | Put of TimedValue.t
+  | Update of TimedValue.t
+  | Remove of Timestamp.t
