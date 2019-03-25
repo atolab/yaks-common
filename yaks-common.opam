@@ -6,7 +6,7 @@ bug-reports:  "https://github.com/atolab/yaks-common/issues/"
 dev-repo:     "git+https://github.com/atolab/yaks-common.git"
 tags:         ["org:adlink-technology"]
 
-version:"0.2.5"
+version:"0.2.6"
 license: "Apache-2.0"
 
 build: [
@@ -22,7 +22,7 @@ depends: [
   "lwt" 
   "ppx_deriving" 
   "lwt_ppx"
-  "apero-core" {>= "0.4.3"}
+  "apero-core" {>= "0.4.4"}
 ]
 
 synopsis : "YAKS Common OCaml library"
