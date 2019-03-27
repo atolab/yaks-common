@@ -188,8 +188,8 @@ module Value = struct
   let to_json_encoding = 
     let open Yojson.Basic in
     function
-    | RawValue (_, r)  -> Apero.Result.ok @@ JSonValue (to_string @@ `String (Bytes.to_string r))  (* @TODO: base64 conversion and and encoding description as json attribute ? *)
-    | StringValue s  -> Apero.Result.ok @@ JSonValue (to_string @@ `String s)
+    | RawValue (_, r)  -> Apero.Result.ok @@ JSonValue (Bytes.to_string r)  (* @TODO: base64 conversion and and encoding description as json attribute ? *)
+    | StringValue s  -> Apero.Result.ok @@ JSonValue s
     | PropertiesValue p -> Apero.Result.ok @@ JSonValue (to_string @@ json_from_properties p)
     | JSonValue _ as v -> Apero.Result.ok @@ v
     | SqlValue v -> Apero.Result.ok @@ StringValue (json_from_sql v)
