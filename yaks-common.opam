@@ -20,7 +20,8 @@ depends: [
   "fmt" 
   "logs" 
   "lwt" 
-  "ppx_deriving" 
+  "ppx_deriving"
+  "ppx_cstruct"
   "lwt_ppx"
   "apero-core" {>= "0.4.4"}
 ]
