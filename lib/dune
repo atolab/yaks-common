@@ -2,6 +2,6 @@
  (name            yaks_common)
   (public_name     yaks-common)
   (wrapped     false)
-  (libraries       apero-core apero-time str lwt lwt.unix logs logs.lwt ppx_deriving.show ppx_deriving.ord)
+  (libraries       apero-core apero-time zenoh-ocaml str lwt lwt.unix logs logs.lwt ppx_deriving.show ppx_deriving.ord)
   (preprocess
     (pps ppx_deriving.show ppx_deriving.ord lwt_ppx ppx_cstruct)))
