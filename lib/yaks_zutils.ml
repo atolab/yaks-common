@@ -13,6 +13,8 @@ let zenohid_to_yaksid id = Printf.sprintf "%s-%s-%s-%s-%s"
   (Astring.with_index_range ~first:16 ~last:19 id)
   (Astring.with_index_range ~first:20 ~last:31 id)
 
+let empty_buf = Abuf.create 0
+
 let encoding_to_flag v = Value.encoding v |> Value.encoding_to_int |> Int64.of_int
 let encoding_of_flag f = match f with 
   | None -> Value.RAW 
@@ -115,10 +117,24 @@ let write_update zenoh ?timestamp path (value:Value.t) =
   encode_value value buf;
   Zenoh.write zenoh res ?timestamp ~encoding ~kind:kind_update buf
 
-let empty_buf = Abuf.create 0
 let write_remove zenoh ?timestamp  path =
   let res = Path.to_string path in
   Zenoh.write zenoh res ?timestamp ~kind:kind_remove empty_buf
+
+let stream_put pub ?timestamp (value:Value.t) =
+  let buf = Abuf.create ~grow:8192 8192 in
+  let encoding = encoding_to_flag value in
+  encode_value value buf;
+  Zenoh.stream pub ?timestamp ~encoding buf
+
+let stream_update pub ?timestamp (value:Value.t) =
+  let buf = Abuf.create ~grow:8192 8192 in
+  let encoding = encoding_to_flag value in
+  encode_value value buf;
+  Zenoh.stream pub ?timestamp ~encoding ~kind:kind_update buf
+
+let stream_remove ?timestamp pub =
+  Zenoh.stream pub ?timestamp ~kind:kind_remove empty_buf
 
 
 let subscribe zenoh ?hlc ?listener selector =
