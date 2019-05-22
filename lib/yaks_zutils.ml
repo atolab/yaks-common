@@ -87,6 +87,20 @@ let query_values zenoh selector =
   Zenoh.lquery zenoh resname predicate
   >|= List.map reply_to_kv
 
+let squery_values zenoh selector =
+  let qreply_to_kv (qreply:Zenoh.queryreply) = match qreply with
+    | StorageData {stoid=_; rsn=_; resname; data; info} ->
+      let path = Path.of_string resname in
+      let encoding = encoding_of_flag info.encoding in
+      let value = decode_value data encoding in
+      Some (path, value)
+    | _ -> None
+  in
+  let resname = Selector.path selector in
+  let predicate = Selector.optional_part selector in
+  Zenoh.squery zenoh resname predicate
+  |> Lwt_stream.filter_map qreply_to_kv
+
 let write_put zenoh ?timestamp path (value:Value.t) =
   let res = Path.to_string path in
   let buf = Abuf.create ~grow:8192 8192 in
