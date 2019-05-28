@@ -38,7 +38,7 @@ let decode_time ?hlc (info:Ztypes.data_info) = match (info.ts, hlc) with
   | (Some t, _) -> Lwt.return t 
   | (None, Some hlc) -> Logs.warn (fun m -> m "Received a data from Zenoh without timestamp; generate it");
     HLC.new_timestamp hlc
-  | (None, None) -> Logs.warn (fun m -> m "Received a data from Zenoh without timestamp; set time to 0");
+  | (None, None) -> Logs.warn (fun m -> m "Received a data from Zenoh without timestamp; set time to 0 !!!!!");
     Lwt.return timestamp0
 
 let decode_timedvalue ?hlc (buf:Abuf.t) (info:Ztypes.data_info) =
@@ -64,11 +64,11 @@ let decode_changes ?hlc samples =
     (fun e -> Logs.err (fun m -> m "[YZu]: INTERNAL ERROR receiving data via Zenoh: %s" (Printexc.to_string e)); Lwt.return acc)
   ) []
 
-let query_timedvalues zenoh hlc selector =
+let query_timedvalues zenoh ?hlc selector =
   let open Lwt.Infix in
   let reply_to_ktv (resname, buf, (info:Ztypes.data_info)) =
     let path = Path.of_string resname in
-    let%lwt timedvalue = decode_timedvalue ~hlc buf info in
+    let%lwt timedvalue = decode_timedvalue ?hlc buf info in
     Lwt.return (path, timedvalue)
   in
   let resname = Selector.path selector in
