@@ -10,7 +10,7 @@ version:"0.2.7"
 license: "Apache-2.0"
 
 build: [
-  ["jbuilder" "build" "--only" "yaks-common" "--root" "." "-j" jobs "@install"]
+  ["dune" "build" "-p" name "-j" jobs]
 ]
 
 
