@@ -17,13 +17,15 @@ build: [
 depends: [
   "ocaml" {>= "4.03.0"}
   "dune"
-  "fmt" 
-  "logs" 
-  "lwt" 
+  "fmt"
+  "logs"
+  "lwt"
   "ppx_deriving"
   "ppx_cstruct"
   "lwt_ppx"
-  "apero-core" {>= "0.4.4"}
+  "apero-core" {>= "0.4.5"}
+  "apero-time" {>= "0.4.5"}
+  "zenoh-ocaml" {= "0.2.5"}
 ]
 
 synopsis : "YAKS Common OCaml library"
