@@ -20,12 +20,12 @@ let encoding_of_flag f = match f with
   | None -> Value.RAW 
   | Some i -> Option.get_or_default (Value.int_to_encoding (Int64.to_int i)) Value.RAW
 
-let encode_value v buf = match Value.transcode v Value.RAW with
-  | Ok Value.RawValue(_, b) -> Apero.encode_bytes b buf
-  | Ok v' -> Logs.err (fun m -> m "[YZu]: INTERNAL ERROR: transcode of value '%s' to RAW didn't return a RawValue but: '%s'" (Value.to_string v) (Value.to_string v'))
-  | Error e -> Logs.err (fun m -> m "[YZu]: INTERNAL ERROR: transcode of value '%s' to RAW failed: '%s'" (Value.to_string v) (show_yerror e))
+let encode_value v = match Value.transcode v Value.RAW with
+  | Ok Value.RawValue(_, b) -> Abuf.from_bytes b
+  | Ok v' -> Logs.err (fun m -> m "[YZu]: INTERNAL ERROR: transcode of value '%s' to RAW didn't return a RawValue but: '%s'" (Value.to_string v) (Value.to_string v')); empty_buf
+  | Error e -> Logs.err (fun m -> m "[YZu]: INTERNAL ERROR: transcode of value '%s' to RAW failed: '%s'" (Value.to_string v) (show_yerror e)); empty_buf
 let decode_value buf encoding =
-  let raw_value = Value.RawValue(None, Apero.decode_bytes buf) in
+  let raw_value = Value.RawValue(None, Abuf.get_bytes ~at:(Abuf.r_pos buf) (Abuf.readable_bytes buf) buf) in
   match Value.transcode raw_value encoding with
   | Ok v -> v
   | Error e -> raise @@ YException e
@@ -105,16 +105,15 @@ let squery_values zenoh selector =
 
 let write_put zenoh ?timestamp path (value:Value.t) =
   let res = Path.to_string path in
-  let buf = Abuf.create ~grow:8192 8192 in
+  let buf = encode_value value in
   let encoding = encoding_to_flag value in
-  encode_value value buf;
+    Logs.warn (fun m -> m "[Yapi]: PUT on %s : %s" (Path.to_string path) (Abuf.hexdump buf));
   Zenoh.write zenoh res ?timestamp ~encoding buf
 
 let write_update zenoh ?timestamp path (value:Value.t) =
   let res = Path.to_string path in
-  let buf = Abuf.create ~grow:8192 8192 in
+  let buf = encode_value value in
   let encoding = encoding_to_flag value in
-  encode_value value buf;
   Zenoh.write zenoh res ?timestamp ~encoding ~kind:kind_update buf
 
 let write_remove zenoh ?timestamp  path =
@@ -122,15 +121,13 @@ let write_remove zenoh ?timestamp  path =
   Zenoh.write zenoh res ?timestamp ~kind:kind_remove empty_buf
 
 let stream_put pub ?timestamp (value:Value.t) =
-  let buf = Abuf.create ~grow:8192 8192 in
+  let buf = encode_value value in
   let encoding = encoding_to_flag value in
-  encode_value value buf;
   Zenoh.stream pub ?timestamp ~encoding buf
 
 let stream_update pub ?timestamp (value:Value.t) =
-  let buf = Abuf.create ~grow:8192 8192 in
+  let buf = encode_value value in
   let encoding = encoding_to_flag value in
-  encode_value value buf;
   Zenoh.stream pub ?timestamp ~encoding ~kind:kind_update buf
 
 let stream_remove ?timestamp pub =
